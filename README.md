@@ -1,2 +1,0 @@
-# stroop
-stroop-test-claude
