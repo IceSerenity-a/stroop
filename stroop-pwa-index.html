@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f0f14" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Stroop Test" />
+  <meta name="description" content="The Stroop Effect psychology experiment — test your cognitive flexibility." />
+  <title>The Stroop Effect</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #0f0f14; color: #f0eee8; font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+    #root { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 16px; padding-top: max(20px, env(safe-area-inset-top)); padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+
+    .screen { max-width: 580px; width: 100%; animation: fadeIn .4s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    .eyebrow { font-size: 11px; letter-spacing: 4px; color: #555; text-transform: uppercase; margin-bottom: 12px; }
+    h1 { font-family: 'Playfair Display', serif; font-size: clamp(42px,10vw,72px); font-weight: 900; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; }
+    h2 { font-family: 'Playfair Display', serif; font-size: clamp(28px,7vw,42px); font-weight: 900; line-height: 1.1; margin-bottom: 8px; }
+    .gold { color: #d69e2e; }
+    .subtitle { color: #666; font-size: 15px; line-height: 1.7; font-weight: 300; margin: 18px 0 28px; }
+
+    /* Buttons */
+    .btn-primary { background: #f0eee8; color: #0f0f14; border: none; padding: 15px 36px; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; letter-spacing: .3px; transition: all .2s; display: inline-block; }
+    .btn-primary:active { transform: scale(.97); }
+
+    .btn-color { border: 2px solid transparent; border-radius: 8px; padding: 13px 20px; font-size: 15px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all .15s; text-transform: capitalize; background: #1c1c26; min-width: 80px; }
+    .btn-color:active { transform: scale(.95); }
+
+    /* Tag chips */
+    .chip-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+    .chip { background: #1c1c26; border: 1px solid #2a2a3a; border-radius: 20px; padding: 8px 16px; font-size: 13px; color: #888; }
+
+    /* Instruction cards */
+    .inst-card { background: #1c1c26; border-radius: 10px; padding: 14px 18px; margin-bottom: 12px; text-align: left; }
+    .inst-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+    .inst-desc { font-size: 14px; color: #999; line-height: 1.6; }
+
+    /* Trial header */
+    .trial-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 13px; color: #666; }
+    .trial-title { font-weight: 600; color: #aaa; font-size: 14px; }
+    .trial-stats { display: flex; gap: 18px; }
+    .timer-red { color: #e53e3e !important; font-weight: 700; font-size: 17px; }
+
+    /* Progress bar */
+    .progress-track { background: #1c1c26; border-radius: 4px; height: 4px; margin-bottom: 20px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width .3s ease; }
+
+    /* Word display */
+    .word-display { font-family: 'Playfair Display', serif; font-weight: 900; font-size: clamp(52px, 14vw, 96px); line-height: 1; margin: 24px 0 32px; min-height: 100px; display: flex; align-items: center; justify-content: center; transition: color .1s; }
+    .word-display.pulse { animation: pulseAnim .35s ease; }
+    .word-display.shake { animation: shakeAnim .35s ease; }
+    @keyframes pulseAnim { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+    @keyframes shakeAnim { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 60%{transform:translateX(8px)} }
+
+    .feedback-icon { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 12px; min-height: 36px; }
+
+    /* Color button grid */
+    .color-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+    /* Trial done banner */
+    .done-banner { text-align: center; animation: fadeIn .4s ease; }
+    .done-title { font-family: 'Playfair Display', serif; font-size: 32px; margin-bottom: 8px; }
+    .done-sub { color: #888; font-size: 15px; margin-bottom: 24px; }
+
+    /* Instruction hint */
+    .hint { font-size: 13px; color: #555; line-height: 1.6; margin-bottom: 24px; text-align: center; }
+
+    /* ── RESULTS ── */
+    .section-label { font-size: 11px; font-weight: 700; color: #444; letter-spacing: 3px; text-transform: uppercase; margin: 28px 0 12px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat-card { background: #1c1c26; border-radius: 10px; padding: 14px 10px; text-align: center; border-top: 3px solid transparent; }
+    .stat-card-label { font-size: 10px; color: #555; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    .stat-card-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; line-height: 1; }
+    .stat-card-sub { font-size: 11px; color: #444; margin: 4px 0 8px; }
+    .badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid transparent; }
+    .mini-bar-track { background: #111118; border-radius: 3px; height: 4px; margin-top: 10px; overflow: hidden; }
+    .mini-bar-fill { height: 100%; border-radius: 3px; }
+
+    .bar-card { background: #1c1c26; border: 1px solid #2a2a3a; border-radius: 10px; padding: 18px 20px; }
+    .bar-row-label { display: flex; justify-content: space-between; font-size: 13px; color: #888; margin-bottom: 6px; }
+    .bar-track { background: #111118; border-radius: 4px; height: 10px; overflow: hidden; margin-bottom: 14px; }
+    .bar-fill { height: 100%; border-radius: 4px; }
+    .interference-row { margin-top: 14px; padding-top: 14px; border-top: 1px solid #2a2a3a; display: flex; justify-content: space-between; align-items: center; }
+    .interference-val { font-family: 'Playfair Display', serif; font-size: 24px; }
+
+    .insight-card { background: #1c1c26; border-radius: 10px; padding: 16px 18px; margin-bottom: 10px; border-left: 3px solid transparent; }
+    .insight-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .insight-body { font-size: 14px; color: #888; line-height: 1.7; }
+
+    .overall-card { background: #1c1c26; border-radius: 10px; padding: 22px; display: flex; align-items: center; gap: 20px; }
+    .overall-score { font-family: 'Playfair Display', serif; font-size: 52px; font-weight: 900; line-height: 1; }
+    .overall-slash { font-size: 11px; color: #555; margin-top: 2px; }
+    .subscores { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .subscore-box { background: #111118; border-radius: 6px; padding: 6px 10px; text-align: center; min-width: 58px; }
+    .subscore-val { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; }
+    .subscore-name { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Install banner */
+    #install-banner { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #1c1c26; border: 1px solid #3a3a4a; border-radius: 12px; padding: 12px 20px; display: flex; align-items: center; gap: 14px; max-width: 340px; width: calc(100% - 32px); box-shadow: 0 8px 32px rgba(0,0,0,.5); z-index: 999; animation: slideUp .4s ease; }
+    @keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+    #install-banner p { font-size: 13px; color: #aaa; line-height: 1.4; flex: 1; }
+    #install-banner strong { color: #f0eee8; }
+    #install-btn { background: #f0eee8; color: #0f0f14; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    #dismiss-btn { background: none; border: none; color: #555; font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<div id="install-banner" style="display:none">
+  <div>
+    <p><strong>Install Stroop Test</strong><br>Add to home screen for app-like experience</p>
+  </div>
+  <button id="install-btn">Install</button>
+  <button id="dismiss-btn">✕</button>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────
+const TRIAL1_WORDS = [
+  {word:"green",color:"blue"},{word:"blue",color:"red"},{word:"yellow",color:"green"},{word:"blue",color:"yellow"},
+  {word:"blue",color:"green"},{word:"red",color:"yellow"},{word:"yellow",color:"red"},{word:"red",color:"blue"},
+  {word:"yellow",color:"red"},{word:"yellow",color:"blue"},{word:"green",color:"yellow"},{word:"red",color:"green"},
+  {word:"yellow",color:"green"},{word:"green",color:"red"},{word:"blue",color:"yellow"},{word:"yellow",color:"red"},
+  {word:"green",color:"yellow"},{word:"red",color:"green"},{word:"blue",color:"red"},{word:"green",color:"blue"},
+  {word:"blue",color:"green"},{word:"yellow",color:"blue"},{word:"blue",color:"yellow"},{word:"red",color:"blue"},
+];
+const TRIAL3_WORDS = [
+  {word:"BLUE",color:"red"},{word:"RED",color:"purple"},{word:"YELLOW",color:"green"},{word:"ORANGE",color:"blue"},
+  {word:"GREEN",color:"yellow"},{word:"BLUE",color:"orange"},{word:"PURPLE",color:"red"},{word:"RED",color:"green"},
+  {word:"PURPLE",color:"blue"},{word:"YELLOW",color:"purple"},{word:"RED",color:"orange"},{word:"BLUE",color:"green"},
+  {word:"ORANGE",color:"purple"},{word:"BLUE",color:"yellow"},{word:"YELLOW",color:"red"},{word:"RED",color:"blue"},
+  {word:"RED",color:"green"},{word:"GREEN",color:"orange"},{word:"ORANGE",color:"red"},{word:"BLUE",color:"purple"},
+  {word:"PURPLE",color:"yellow"},{word:"YELLOW",color:"blue"},{word:"BLUE",color:"red"},{word:"ORANGE",color:"green"},
+];
+const COLOR_MAP = {red:"#e53e3e",blue:"#3182ce",green:"#38a169",yellow:"#d69e2e",orange:"#dd6b20",purple:"#805ad5"};
+const ALL_T1 = ["red","blue","green","yellow"];
+const ALL_T3 = ["red","blue","green","yellow","orange","purple"];
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let state = {
+  screen: "intro", // intro | instructions | trial | results
+  trial: 1,
+  wordIndex: 0,
+  words: [],
+  errors: 0,
+  startTime: null,
+  elapsed: 0,
+  timeUp: false,
+  scores: {1:null,2:null,3:null},
+  errorsPerTrial: {1:0,2:0,3:0},
+  feedback: null,
+  showNext: false,
+};
+let timerInterval = null;
+let feedbackTimeout = null;
+
+// ── TRIAL CONFIG ──────────────────────────────────────────────────────
+const TRIAL_CFG = {
+  1: { title:"Trial 1 — Read the Word", hint:"Click the button matching what the word SAYS, ignoring its color.", colors:ALL_T1, answer:w=>w.word.toLowerCase(), words:TRIAL1_WORDS, timed:false },
+  2: { title:"Trial 2 — Name the Color", hint:"Click the INK COLOR of each word — ignore what it says.", colors:ALL_T1, answer:w=>w.color.toLowerCase(), words:TRIAL1_WORDS, timed:false },
+  3: { title:"Trial 3 — Color Rush (45s)", hint:"Name the INK COLOR as fast as possible. 45 seconds on the clock!", colors:ALL_T3, answer:w=>w.color.toLowerCase(), words:TRIAL3_WORDS, timed:true, timeLimit:45 },
+};
+
+// ── ACTIONS ───────────────────────────────────────────────────────────
+function startTrial(t) {
+  clearInterval(timerInterval);
+  clearTimeout(feedbackTimeout);
+  const cfg = TRIAL_CFG[t];
+  state = { ...state, screen:"trial", trial:t, words:cfg.words, wordIndex:0, errors:0, elapsed:0, timeUp:false, feedback:null, showNext:false, startTime:Date.now() };
+  if (cfg.timed) {
+    timerInterval = setInterval(() => {
+      state.elapsed++;
+      if (state.elapsed >= cfg.timeLimit) {
+        clearInterval(timerInterval);
+        state.timeUp = true;
+        finishTrial(state.errors);
+      }
+      render();
+    }, 1000);
+  }
+  render();
+}
+
+function handleAnswer(chosen) {
+  if (state.timeUp || state.feedback !== null || state.showNext) return;
+  const cfg = TRIAL_CFG[state.trial];
+  const correct = cfg.answer(state.words[state.wordIndex]);
+  const ok = chosen === correct;
+  if (!ok) state.errors++;
+  state.feedback = ok ? "correct" : "wrong";
+  render();
+  feedbackTimeout = setTimeout(() => {
+    state.feedback = null;
+    const next = state.wordIndex + 1;
+    if (next >= state.words.length) {
+      finishTrial(state.errors);
+    } else {
+      state.wordIndex = next;
+    }
+    render();
+  }, 350);
+}
+
+function finishTrial(finalErrors) {
+  clearInterval(timerInterval);
+  const cfg = TRIAL_CFG[state.trial];
+  const t = state.trial;
+  if (t === 3) {
+    state.scores[3] = state.wordIndex + 1;
+  } else {
+    state.scores[t] = parseFloat(((Date.now() - state.startTime) / 1000).toFixed(2));
+  }
+  state.errorsPerTrial[t] = finalErrors;
+  state.showNext = true;
+  render();
+}
+
+function goResults() { state.screen = "results"; render(); }
+function resetAll() {
+  clearInterval(timerInterval);
+  state = { screen:"intro", trial:1, wordIndex:0, words:[], errors:0, startTime:null, elapsed:0, timeUp:false, scores:{1:null,2:null,3:null}, errorsPerTrial:{1:0,2:0,3:0}, feedback:null, showNext:false };
+  render();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function badge(label, color) {
+  return `<span class="badge" style="background:${color}22;color:${color};border-color:${color}55">${label}</span>`;
+}
+function rateTime1(t) { return t<20?["Exceptional","#38a169"]:t<30?["Fast","#68d391"]:t<40?["Average","#d69e2e"]:["Slow","#e53e3e"]; }
+function rateTime2(t) { return t<25?["Exceptional","#38a169"]:t<38?["Fast","#68d391"]:t<55?["Average","#d69e2e"]:["Slow","#e53e3e"]; }
+function rateWords3(w) { return w>=20?["Exceptional","#38a169"]:w>=15?["Strong","#68d391"]:w>=10?["Average","#d69e2e"]:["Below Average","#e53e3e"]; }
+function rateInterference(r) { return r<10?["Minimal","#38a169"]:r<30?["Moderate","#68d391"]:r<60?["High","#d69e2e"]:["Very High","#e53e3e"]; }
+function rateAcc(a) { return a>=97?["Near Perfect","#38a169"]:a>=90?["High","#68d391"]:a>=75?["Moderate","#d69e2e"]:["Low","#e53e3e"]; }
+
+// ── RENDER ────────────────────────────────────────────────────────────
+function render() {
+  const root = document.getElementById("root");
+  const s = state;
+
+  if (s.screen === "intro") {
+    root.innerHTML = `
+      <div class="screen" style="text-align:center">
+        <div class="eyebrow">Psychology Experiment</div>
+        <h1>The Stroop<br><span class="gold">Effect</span></h1>
+        <p class="subtitle">In 1929, John Ridley Stroop discovered that automatic reading can interfere with other tasks. This experiment tests your cognitive flexibility across three trials.</p>
+        <div class="chip-row">
+          <span class="chip">Trial 1: Read Words</span>
+          <span class="chip">Trial 2: Name Colors</span>
+          <span class="chip">Trial 3: Color Rush</span>
+        </div>
+        <button class="btn-primary" onclick="gotoInstructions()">Begin Experiment →</button>
+      </div>`;
+  }
+
+  else if (s.screen === "instructions") {
+    root.innerHTML = `
+      <div class="screen" style="text-align:center">
+        <div class="eyebrow">Instructions</div>
+        <h2>How to Play</h2>
+        <p class="subtitle" style="margin-bottom:20px">Three trials, each harder than the last.</p>
+        <div class="inst-card" style="border-left:3px solid #d69e2e">
+          <div class="inst-label" style="color:#d69e2e">Trial 1</div>
+          <div class="inst-desc">A word appears in a different ink color. Click the button matching what the word <strong style="color:#ddd">SAYS</strong>.</div>
+        </div>
+        <div class="inst-card" style="border-left:3px solid #3182ce">
+          <div class="inst-label" style="color:#3182ce">Trial 2</div>
+          <div class="inst-desc">Same words. Now click the <strong style="color:#ddd">INK COLOR</strong> — ignore the word itself.</div>
+        </div>
+        <div class="inst-card" style="border-left:3px solid #e53e3e">
+          <div class="inst-label" style="color:#e53e3e">Trial 3</div>
+          <div class="inst-desc">Harder words, 6 colors, 45-second countdown. Name the ink color as fast as possible.</div>
+        </div>
+        <button class="btn-primary" style="margin-top:16px" onclick="startTrial(1)">Start Trial 1 →</button>
+      </div>`;
+  }
+
+  else if (s.screen === "trial") {
+    const cfg = TRIAL_CFG[s.trial];
+    const current = s.words[s.wordIndex];
+    const timeLeft = cfg.timed ? Math.max(0, cfg.timeLimit - s.elapsed) : null;
+    const progress = s.words.length ? (s.wordIndex / s.words.length) * 100 : 0;
+    const progressColor = cfg.timed ? (timeLeft <= 10 ? "#e53e3e" : "#38a169") : "#d69e2e";
+    const progressWidth = cfg.timed ? (timeLeft / cfg.timeLimit) * 100 : progress;
+
+    let mainContent = "";
+    if (s.showNext || s.timeUp) {
+      mainContent = `
+        <div class="done-banner">
+          <div class="done-title">${s.trial===3&&s.timeUp?"⏱ Time's Up!":"Trial Complete!"}</div>
+          <div class="done-sub">${s.trial===3?`You answered ${s.scores[3]||s.wordIndex} words with ${s.errors} error${s.errors!==1?"s":""}.`:`Completed in ${((Date.now()-s.startTime)/1000).toFixed(1)}s with ${s.errors} error${s.errors!==1?"s":""}.`}</div>
+          ${s.trial<3?`<button class="btn-primary" onclick="startTrial(${s.trial+1})">Next Trial →</button>`:`<button class="btn-primary" onclick="goResults()">See Results →</button>`}
+        </div>`;
+    } else {
+      const feedbackColor = s.feedback==="correct"?"#38a169":s.feedback==="wrong"?"#e53e3e":"transparent";
+      const wordClass = s.feedback==="correct"?"pulse":s.feedback==="wrong"?"shake":"";
+      const shadow = current ? `0 0 40px ${COLOR_MAP[current.color]}44` : "none";
+      mainContent = `
+        <div class="hint">${cfg.hint}</div>
+        <div class="word-display ${wordClass}" style="color:${current?COLOR_MAP[current.color]:"#fff"};text-shadow:${shadow}">${current?current.word:""}</div>
+        <div class="feedback-icon" style="color:${feedbackColor}">${s.feedback==="correct"?"✓":s.feedback==="wrong"?"✗":""}</div>
+        <div class="color-buttons">
+          ${cfg.colors.map(c=>`<button class="btn-color" onclick="handleAnswer('${c}')" style="color:${COLOR_MAP[c]};border-color:${COLOR_MAP[c]}44">${cap(c)}</button>`).join("")}
+        </div>`;
+    }
+
+    root.innerHTML = `
+      <div class="screen">
+        <div class="trial-header">
+          <div class="trial-title">${cfg.title}</div>
+          <div class="trial-stats">
+            ${cfg.timed?`<span class="${timeLeft<=10?"timer-red":""}">⏱ ${timeLeft}s</span>`:""}
+            <span>✗ ${s.errors}</span>
+            <span>${cfg.timed?`${s.wordIndex} done`:`${s.wordIndex}/${s.words.length}`}</span>
+          </div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${progressWidth}%;background:${progressColor}"></div>
+        </div>
+        ${mainContent}
+      </div>`;
+  }
+
+  else if (s.screen === "results") {
+    const s1=s.scores[1], s2=s.scores[2], s3=s.scores[3];
+    const e1=s.errorsPerTrial[1], e2=s.errorsPerTrial[2], e3=s.errorsPerTrial[3];
+    const interference = s1&&s2 ? s2-s1 : null;
+    const intRatio = s1&&s2 ? ((s2-s1)/s1*100) : null;
+    const acc1 = s1 ? Math.round(((24-e1)/24)*100) : null;
+    const acc2 = s2 ? Math.round(((24-e2)/24)*100) : null;
+    const acc3 = s3 ? Math.round(((s3-e3)/s3)*100) : null;
+    const spw1 = s1 ? (s1/24).toFixed(2) : null;
+    const spw2 = s2 ? (s2/24).toFixed(2) : null;
+    const wps3 = s3 ? (s3/45).toFixed(2) : null;
+    const maxBar = Math.max(s1||0,s2||0,1);
+
+    const [r1l,r1c] = s1?rateTime1(s1):["—","#666"];
+    const [r2l,r2c] = s2?rateTime2(s2):["—","#666"];
+    const [r3l,r3c] = s3?rateWords3(s3):["—","#666"];
+    const [rl,rc]   = intRatio!==null?rateInterference(intRatio):["—","#666"];
+
+    const statCards = [
+      {label:"Trial 1 Time",val:s1?`${s1}s`:"—",sub:spw1?`${spw1}s/word`:"",accent:"#d69e2e",rl:r1l,rc:r1c},
+      {label:"Trial 2 Time",val:s2?`${s2}s`:"—",sub:spw2?`${spw2}s/word`:"",accent:"#3182ce",rl:r2l,rc:r2c},
+      {label:"Trial 3 Words",val:s3?`${s3}`:"—",sub:wps3?`${wps3}/sec`:"",accent:"#e53e3e",rl:r3l,rc:r3c},
+    ];
+
+    const accCards = [
+      {label:"Trial 1",acc:acc1,errs:e1,total:24,color:"#d69e2e"},
+      {label:"Trial 2",acc:acc2,errs:e2,total:24,color:"#3182ce"},
+      {label:"Trial 3",acc:acc3,errs:e3,total:s3,color:"#e53e3e"},
+    ];
+
+    // Insights
+    let stroopInsight="", speedInsight="", pressureInsight="", accInsight="";
+    if (interference!==null) {
+      stroopInsight = interference>0
+        ? intRatio>50 ? `You were ${interference.toFixed(1)}s slower naming colors — a ${intRatio.toFixed(0)}% slowdown. This strong interference shows your brain powerfully routes through word-reading before color perception.`
+        : intRatio>20 ? `A ${interference.toFixed(1)}s slowdown (${intRatio.toFixed(0)}%) is a typical Stroop response. Your reading automaticity creates moderate friction when switching to color-naming mode.`
+        : `Only a ${interference.toFixed(1)}s slowdown (${intRatio.toFixed(0)}%). You show good inhibitory control — you can suppress automatic word-reading relatively well.`
+        : `Remarkably, Trial 2 was no slower than Trial 1. This could indicate very strong inhibitory control or a naturally balanced attention system.`;
+    }
+    if (s1) {
+      speedInsight = s1<20 ? `You read 24 words in ${s1}s — that's ${spw1}s/word, an exceptionally fast baseline. Your lexical access is nearly instantaneous.`
+        : s1<35 ? `At ${spw1}s/word your reading speed is solidly above average. Lexical processing is quick with minimal hesitation.`
+        : `You averaged ${spw1}s/word in Trial 1. Taking more time often reflects careful, deliberate processing which can improve accuracy.`;
+      if (s2) speedInsight += ` When switching to color-naming, pace shifted to ${spw2}s/word — reflecting the added cognitive load.`;
+    }
+    if (s3) {
+      pressureInsight = s3>=20 ? `Under 45-second pressure you answered ${s3} words (${wps3}/sec). Excellent — you maintained both speed and cognitive control.`
+        : s3>=14 ? `You answered ${s3} words in 45s (${wps3}/sec). Solid — the harder word set and clock are designed to tax executive function heavily.`
+        : `You answered ${s3} words in 45s. Trial 3 uses expanded vocabulary and time pressure to push cognitive load — every answer counts.`;
+      pressureInsight += e3>3 ? ` The ${e3} errors show the speed-accuracy trade-off kicked in.` : e3>0 ? ` Only ${e3} error${e3>1?"s":""} — great accuracy under pressure.` : ` Zero errors — remarkable precision under the clock!`;
+    }
+    if (acc1!==null&&acc2!==null) {
+      accInsight = acc1>=95&&acc2>=95 ? "Near-perfect accuracy across both trials. You didn't trade accuracy for speed — strong attentional control."
+        : acc1>acc2 ? `Accuracy dropped from ${acc1}% in Trial 1 to ${acc2}% in Trial 2. Classic Stroop pattern: color-naming both slows you down and introduces more errors.`
+        : `Accuracy held at ${acc1}% → ${acc2}%. Maintaining precision under interference is a strong sign of executive control.`;
+    }
+
+    // Overall score
+    let overallHTML = "";
+    if (s1&&s2&&s3) {
+      const speedScore = Math.max(0,100-(s1*1.5));
+      const inhibScore = Math.max(0,100-(Math.max(0,intRatio||0)*0.8));
+      const pressScore = Math.min(100,(s3/24)*100);
+      const avgAcc = (acc1+acc2+(acc3||80))/3;
+      const overall = Math.round(speedScore*.2+inhibScore*.35+pressScore*.25+avgAcc*.2);
+      const [ol,oc] = overall>=85?["Outstanding","#38a169"]:overall>=70?["Strong","#68d391"]:overall>=55?["Average","#d69e2e"]:["Developing","#e53e3e"];
+      overallHTML = `
+        <div class="section-label">Overall Cognitive Score</div>
+        <div class="overall-card" style="border:1px solid ${oc}44">
+          <div style="text-align:center;min-width:80px">
+            <div class="overall-score" style="color:${oc}">${overall}</div>
+            <div class="overall-slash">/ 100</div>
+          </div>
+          <div style="flex:1">
+            ${badge(ol,oc)}
+            <div style="font-size:13px;color:#666;margin-top:8px;line-height:1.6">Weighted across reading speed (20%), interference resistance (35%), timed performance (25%), and accuracy (20%).</div>
+            <div class="subscores">
+              ${[["Speed",Math.round(speedScore),"#d69e2e"],["Inhibition",Math.round(inhibScore),"#3182ce"],["Pressure",Math.round(pressScore),"#e53e3e"],["Accuracy",Math.round(avgAcc),"#805ad5"]].map(([n,v,c])=>`<div class="subscore-box"><div class="subscore-val" style="color:${c}">${v}</div><div class="subscore-name">${n}</div></div>`).join("")}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    root.innerHTML = `
+      <div class="screen" style="text-align:center">
+        <div class="eyebrow">Experiment Complete</div>
+        <h2>Your Results</h2>
+        <p style="color:#555;font-size:14px;margin-bottom:4px">A full breakdown of your cognitive performance.</p>
+
+        <div class="section-label">Overview</div>
+        <div class="stat-grid">
+          ${statCards.map(c=>`
+            <div class="stat-card" style="border-top-color:${c.accent}">
+              <div class="stat-card-label">${c.label}</div>
+              <div class="stat-card-value" style="color:${c.accent}">${c.val}</div>
+              <div class="stat-card-sub">${c.sub}</div>
+              ${badge(c.rl,c.rc)}
+            </div>`).join("")}
+        </div>
+
+        <div class="section-label">Time Comparison</div>
+        <div class="bar-card">
+          ${[{label:"Trial 1 — Read Words",time:s1,color:"#d69e2e"},{label:"Trial 2 — Name Colors",time:s2,color:"#3182ce"}].map(b=>`
+            <div class="bar-row-label"><span>${b.label}</span><span style="color:${b.color};font-weight:600">${b.time?b.time+"s":"—"}</span></div>
+            <div class="bar-track"><div class="bar-fill" style="background:${b.color};width:${b.time?(b.time/maxBar*100):0}%"></div></div>`).join("")}
+          ${interference!==null?`
+            <div class="interference-row">
+              <div>
+                <div style="font-size:11px;color:#555;margin-bottom:3px">Stroop Interference</div>
+                <div class="interference-val" style="color:${interference>0?"#e53e3e":"#38a169"}">${interference>0?"+":""}${interference.toFixed(1)}s <span style="font-size:13px;color:#555">(${intRatio>0?"+":""}${intRatio.toFixed(0)}%)</span></div>
+              </div>
+              ${badge(rl,rc)}
+            </div>`:""}
+        </div>
+
+        <div class="section-label">Accuracy Breakdown</div>
+        <div class="stat-grid">
+          ${accCards.map(c=>{
+            const [al,ac]=c.acc!==null?rateAcc(c.acc):["—","#666"];
+            return `<div class="stat-card" style="border-top-color:${c.color}33;border:1px solid #2a2a3a">
+              <div class="stat-card-label">${c.label}</div>
+              <div class="stat-card-value" style="color:${ac};font-size:24px">${c.acc!==null?c.acc+"%":"—"}</div>
+              <div class="stat-card-sub" style="font-size:10px">${c.errs!==undefined&&c.total?`${c.errs} err / ${c.total} words`:""}</div>
+              ${badge(al,ac)}
+              <div class="mini-bar-track"><div class="mini-bar-fill" style="background:${c.color};width:${c.acc!==null?c.acc:0}%"></div></div>
+            </div>`;
+          }).join("")}
+        </div>
+
+        <div class="section-label">What This Tells Us</div>
+        ${interference!==null?`<div class="insight-card" style="border-left-color:#d69e2e"><div class="insight-title" style="color:#d69e2e">⚡ The Stroop Effect</div><div class="insight-body">${stroopInsight}</div></div>`:""}
+        ${s1?`<div class="insight-card" style="border-left-color:#3182ce"><div class="insight-title" style="color:#3182ce">🧠 Processing Speed</div><div class="insight-body">${speedInsight}</div></div>`:""}
+        ${s3?`<div class="insight-card" style="border-left-color:#e53e3e"><div class="insight-title" style="color:#e53e3e">⏱ Under Pressure</div><div class="insight-body">${pressureInsight}</div></div>`:""}
+        ${acc1!==null&&acc2!==null?`<div class="insight-card" style="border-left-color:#805ad5"><div class="insight-title" style="color:#805ad5">🎯 Accuracy Pattern</div><div class="insight-body">${accInsight}</div></div>`:""}
+
+        ${overallHTML}
+
+        <button class="btn-primary" style="margin-top:28px" onclick="resetAll()">Try Again</button>
+      </div>`;
+  }
+}
+
+// Global handlers
+window.gotoInstructions = () => { state.screen = "instructions"; render(); };
+window.startTrial = startTrial;
+window.handleAnswer = handleAnswer;
+window.goResults = goResults;
+window.resetAll = resetAll;
+
+render();
+
+// ── PWA: Service Worker registration ─────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ── PWA: Install prompt ───────────────────────────────────────────────
+let deferredPrompt = null;
+const banner = document.getElementById('install-banner');
+const installBtn = document.getElementById('install-btn');
+const dismissBtn = document.getElementById('dismiss-btn');
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  banner.style.display = 'flex';
+});
+
+installBtn.addEventListener('click', async () => {
+  banner.style.display = 'none';
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+  }
+});
+
+dismissBtn.addEventListener('click', () => { banner.style.display = 'none'; });
+window.addEventListener('appinstalled', () => { banner.style.display = 'none'; });
+</script>
+</body>
+</html>
